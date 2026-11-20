@@ -1,13 +1,13 @@
 <?php
-namespace App\Facades\Guards;
+namespace IkongDev\RestApi\Guards;
 
-use App\Facades\Enum\ResponseType;
-use App\Facades\Status\Fail;
-use App\Facades\Status\Forbidden;
-use App\Facades\Status\NotFound;
-use App\Facades\Status\ServerError;
-use App\Facades\Status\Status;
-use App\Facades\Status\Unauthorized;
+use IkongDev\RestApi\Enum\ResponseType;
+use IkongDev\RestApi\Status\Fail;
+use IkongDev\RestApi\Status\Forbidden;
+use IkongDev\RestApi\Status\NotFound;
+use IkongDev\RestApi\Status\ServerError;
+use IkongDev\RestApi\Status\Status;
+use IkongDev\RestApi\Status\Unauthorized;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Configuration\Exceptions;

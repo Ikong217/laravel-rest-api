@@ -1,5 +1,5 @@
 <?php
-namespace App\Facades\Status;
+namespace IkongDev\RestApi\Status;
 
 use Illuminate\Support\Facades\Log;
 

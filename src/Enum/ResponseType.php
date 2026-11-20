@@ -1,5 +1,5 @@
 <?php
-namespace App\Facades\Enum;
+namespace IkongDev\RestApi\Enum;
 
 enum ResponseType: string {
     case JSON   = 'json';

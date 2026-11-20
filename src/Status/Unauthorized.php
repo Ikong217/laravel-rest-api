@@ -1,12 +1,12 @@
 <?php
-namespace App\Facades\Status;
+namespace IkongDev\RestApi\Status;
 
 use Illuminate\Support\Facades\Log;
 
-class Forbidden extends Status
+class Unauthorized extends Status
 {
     protected string $status = 'fail';
-    protected int $code      = 403;
+    protected int $code      = 401;
     public function log(): void
     {
         Log::warning($this->message, $this->data);

@@ -1,7 +1,7 @@
 <?php
-namespace App\Facades\Guards;
+namespace IkongDev\RestApi\Guards;
 
-use App\Facades\Enum\ResponseType;
+use IkongDev\RestApi\Enum\ResponseType;
 
 class ApiGuardResponse extends GuardResponse
 {
