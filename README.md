@@ -274,10 +274,21 @@ Route::controller(ProductController::class)
 
 The middleware reads the bearer token from the request and finds the matching Sanctum token. If it is valid, the token's owner becomes the request user, so `$request->user()` works inside your `process()` closure. If it is missing or invalid, a JSON `Forbidden` response is returned and your controller never runs.
 
-Requirements:
+Setup (skip anything you've already done):
 
-- Sanctum is installed
-- Your `User` model uses `Laravel\Sanctum\HasApiTokens`
+1. Install Sanctum and run its migrations. On Laravel 11 and 12, `php artisan install:api` does both.
+2. Add the trait to your `User` model:
+
+```php
+use Laravel\Sanctum\HasApiTokens;
+
+class User extends Authenticatable
+{
+    use HasApiTokens;
+}
+```
+
+The JSON exception guard works without any of this. Only `requiresToken` needs Sanctum.
 
 ## OTP helper
 
@@ -296,6 +307,14 @@ $otp->send();
 ```
 
 `send()` quietly does nothing if the email is locked or a code was sent too recently, so check `isLocked()` and `isDebounced()` first if you want to tell the user.
+
+### Before you use it
+
+The OTP helper works right after install, with nothing to publish. Your app just needs three things:
+
+- **Mail configured:** the `MAIL_*` values in your `.env`.
+- **A queue worker running**, or `QUEUE_CONNECTION=sync` in `.env`. The default email is queued.
+- **A cache driver other than `array`:** file, Redis, or database all work. OTPs are stored in the cache.
 
 ### Verifying a code
 
