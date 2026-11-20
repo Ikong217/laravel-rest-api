@@ -1,7 +1,7 @@
 <?php
-namespace App\Facades\Status;
+namespace IkongDev\RestApi\Status;
 
-use App\Facades\Enum\ResponseType;
+use IkongDev\RestApi\Enum\ResponseType;
 
 abstract class Status
 {

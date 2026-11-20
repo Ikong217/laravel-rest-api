@@ -1,7 +1,7 @@
 <?php
-namespace App\Facades\Auth;
+namespace IkongDev\RestApi\Auth;
 
-use App\Facades\Auth\Enums\OTPStatus;
+use IkongDev\RestApi\Auth\Enums\OTPStatus;
 use App\Mail\OTPMail;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;

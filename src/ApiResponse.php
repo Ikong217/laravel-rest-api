@@ -1,16 +1,16 @@
 <?php
 namespace IkongDev\RestApi;
 
-use App\Facades\Enum\ResponseType;
-use App\Facades\Helper\Header;
-use App\Facades\Helper\Parameter;
-use App\Facades\Status\Fail;
-use App\Facades\Status\Forbidden;
-use App\Facades\Status\NotFound;
-use App\Facades\Status\ServerError;
-use App\Facades\Status\Status;
-use App\Facades\Status\Success;
-use App\Facades\Status\Unauthorized;
+use IkongDev\RestApi\Enum\ResponseType;
+use IkongDev\RestApi\Helper\Header;
+use IkongDev\RestApi\Helper\Parameter;
+use IkongDev\RestApi\Status\Fail;
+use IkongDev\RestApi\Status\Forbidden;
+use IkongDev\RestApi\Status\NotFound;
+use IkongDev\RestApi\Status\ServerError;
+use IkongDev\RestApi\Status\Status;
+use IkongDev\RestApi\Status\Success;
+use IkongDev\RestApi\Status\Unauthorized;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;

@@ -1,5 +1,5 @@
 <?php
-namespace App\Facades\Helper;
+namespace IkongDev\RestApi\Helper;
 
 class Parameter
 {
