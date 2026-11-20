@@ -1,9 +1,9 @@
 <?php
 namespace IkongDev\RestApi\Auth;
 
-use IkongDev\RestApi\Auth\Enums\OTPStatus;
-use App\Mail\OTPMail;
 use Carbon\Carbon;
+use IkongDev\RestApi\Auth\Enums\OTPStatus;
+use IkongDev\RestApi\Auth\Mail\OTPMail;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -98,11 +98,10 @@ class OTP
             now()->addSeconds($this->resendInterval)
         );
 
-        // TODO:
-        $expiry = $this->duration / 60;
-        Mail::to($this->email)->send(new OTPMail($otp, $expiry));
+        $mailable = config('restapi.otp.mailable', OTPMail::class);
+        $expiry   = (int) ceil($this->duration / 60);
 
-        logger()->info("OTP for {$this->email}: {$otp}");
+        Mail::to($this->email)->send(new $mailable($otp, $expiry));
     }
 
     public function try(string $otp): OTPStatus
@@ -191,7 +190,7 @@ class OTP
 
         return max(
             0,
-            now()->diffInSeconds(Carbon::createFromTimestamp($timestamp), false)
+            (int) ceil(now()->diffInSeconds(Carbon::createFromTimestamp($timestamp), false))
         );
     }
 
@@ -239,7 +238,7 @@ class OTP
 
         return max(
             0,
-            now()->diffInSeconds($unlock, false)
+            (int) ceil(now()->diffInSeconds($unlock, false))
         );
     }
 

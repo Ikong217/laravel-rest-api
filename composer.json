@@ -1,25 +1,45 @@
 {
   "name": "ikongdev/laravel-rest-api",
-  "description": "A lightweight Laravel package that simplifies REST API requests and effortlessly handles JSON, XML, and plain string responses.",
+  "description": "A lightweight Laravel package for consistent REST API responses: a fluent response builder, JSON/XML/plain output, JSON exception handling, optional Sanctum token middleware, and an OTP helper.",
   "type": "library",
   "license": "MIT",
-  "autoload": {
-    "psr-4": {
-      "IkongDev\\RestApi\\": "src/"
-    }
-  },
+  "keywords": [
+    "laravel",
+    "api",
+    "rest",
+    "json",
+    "response",
+    "sanctum",
+    "otp"
+  ],
   "authors": [
     {
       "name": "Jericho Umayam",
       "email": "jerichoumayam473@gmail.com"
     }
   ],
-  "minimum-stability": "stable",
   "require": {
     "php": "^8.2",
-    "illuminate/contracts": "^11.0|^12.0",
-    "illuminate/http": "^11.0|^12.0",
-    "illuminate/support": "^11.0|^12.0",
-    "illuminate/validation": "^11.0|^12.0"
-  }
+    "laravel/framework": "^11.0|^12.0"
+  },
+  "suggest": {
+    "laravel/sanctum": "^4.0 is required to use the requiresToken middleware"
+  },
+  "autoload": {
+    "psr-4": {
+      "IkongDev\\RestApi\\": "src/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "IkongDev\\RestApi\\ApiResponseServiceProvider"
+      ]
+    }
+  },
+  "config": {
+    "sort-packages": true
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
 }
