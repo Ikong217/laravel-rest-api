@@ -272,7 +272,15 @@ Route::controller(ProductController::class)
     });
 ```
 
-The middleware reads the bearer token from the request and finds the matching Sanctum token. If it is valid, the token's owner becomes the request user, so `$request->user()` works inside your `process()` closure. If it is missing or invalid, a JSON `Forbidden` response is returned and your controller never runs.
+The middleware reads the bearer token from the request and finds the matching Sanctum token. If it is valid, the token's owner becomes the request user, so `$request->user()` works inside your `process()` closure. If it is missing, invalid, or expired, a JSON `Unauthorized` response is returned and your controller never runs.
+
+Clients send the token in the `Authorization` header:
+
+```
+Authorization: Bearer 1|xxxxxxxxxxxxxxxx
+```
+
+Expiry follows your Sanctum settings: set `expiration` (in minutes) in `config/sanctum.php`, or give a token its own `expires_at` when you create it, and expired tokens are rejected. By default Sanctum tokens never expire.
 
 Setup (skip anything you've already done):
 
