@@ -1,5 +1,5 @@
 <?php
-namespace App\Facades;
+namespace IkongDev\RestApi;
 
 use App\Facades\Enum\ResponseType;
 use App\Facades\Helper\Header;

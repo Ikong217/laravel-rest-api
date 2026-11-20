@@ -1,5 +1,5 @@
 <?php
-namespace App\Facades\Auth\Enums;
+namespace IkongDev\RestApi\Auth\Enums;
 
 enum OTPStatus {
     case Confirmed;
