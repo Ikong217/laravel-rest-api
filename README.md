@@ -13,14 +13,14 @@ A small Laravel package for building consistent API responses. Write your logic 
 
 ## Requirements
 
-- PHP 8.1+
-- Laravel 11+
+- PHP 8.2+
+- Laravel 11 or 12
 - [Laravel Sanctum](https://laravel.com/docs/sanctum) (only needed for the token middleware; your `User` model must use `Laravel\Sanctum\HasApiTokens`)
 
 ## Installation
 
 ```bash
-composer require ikongdev/rest-api
+composer require ikongdev/laravel-rest-api
 ```
 
 ## Quick start
@@ -339,6 +339,45 @@ return match ($status) {
 | `clear($includeLock = true)`                          | Remove the stored code (and the lock)          |
 
 > OTP state lives in your Laravel cache, so use a shared driver (file, Redis, database), not `array`.
+
+### Customizing the email
+
+`OTP::send()` uses a mailable and an HTML template that ship with the package, so it works out of the box. You can change either one.
+
+**Change the template only.** Point `MAIL_TEMPLATE` at your own Blade view in `.env`:
+
+```env
+MAIL_TEMPLATE="mail.otp"
+```
+
+Your view receives `$otp` and `$expiresInMinutes`:
+
+```blade
+<p>Your code is <strong>{{ $otp }}</strong>. It expires in {{ $expiresInMinutes }} minutes.</p>
+```
+
+The view is rendered as plain Blade/HTML. If you want the default look, publish the package's template and edit it:
+
+```bash
+php artisan vendor:publish --tag=restapi-views
+```
+
+**Change the whole mailable.** Publish the config and set your own class:
+
+```bash
+php artisan vendor:publish --tag=restapi-config
+```
+
+```php
+// config/restapi.php
+'otp' => [
+    'mailable' => \App\Mail\MyOtpMail::class,
+],
+```
+
+Your mailable's constructor receives `(string $otp, int $expiresInMinutes)`.
+
+> The default mailable implements `ShouldQueue`, so make sure a queue worker is running, or set `QUEUE_CONNECTION=sync`.
 
 ### Example: two-step login
 

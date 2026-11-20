@@ -28,5 +28,14 @@ class ApiResponseServiceProvider extends ServiceProvider
                 (new ApiGuardResponse())->parse(new Exceptions($handler));
             }
         });
+
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'restapi');
+        $this->publishes([__DIR__.'/../config/restapi.php' => config_path('restapi.php')], 'restapi-config');
+        $this->publishes([__DIR__.'/../resources/views' => resource_path('views/vendor/restapi')], 'restapi-views');
+    }
+
+    public function register(): void
+    {
+        $this->mergeConfigFrom(__DIR__.'/../config/restapi.php', 'restapi');
     }
 }

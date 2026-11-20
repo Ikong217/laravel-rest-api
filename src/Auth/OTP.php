@@ -100,7 +100,9 @@ class OTP
 
         // TODO:
         $expiry = $this->duration / 60;
-        Mail::to($this->email)->send(new OTPMail($otp, $expiry));
+        
+        $mailable = config('restapi.otp.mailable');
+        Mail::to($this->email)->send(new $mailable($otp, (int) ceil($this->duration / 60)));
 
         logger()->info("OTP for {$this->email}: {$otp}");
     }
