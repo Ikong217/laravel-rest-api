@@ -12,6 +12,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
@@ -47,9 +48,21 @@ abstract class GuardResponse
                 $e instanceof AuthenticationException       => $this->unauthenticated($e),
                 $e instanceof AuthorizationException        => $this->forbidden($e),
                 $e instanceof ValidationException           => $this->validation($e),
+                $e instanceof HttpExceptionInterface        => $this->httpError($e), // new
                 default                                     => $this->serverError($e),
             };
         });
+    }
+
+    protected function httpError(HttpExceptionInterface $e)
+    {
+        return match ($e->getStatusCode()) {
+            401     => $this->unauthenticated($e),
+            403     => $this->forbidden($e),
+            404     => $this->notFound($e),
+            405     => $this->notAllowed($e),
+            default => $this->serverError($e),
+        };
     }
 
     private function toGuard(): string
