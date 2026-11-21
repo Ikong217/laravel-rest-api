@@ -6,8 +6,10 @@ A small Laravel package for building consistent API responses. Write your logic 
 - Predictable response shape for every endpoint
 - Typed status classes (`Success`, `Fail`, `Forbidden`, `NotFound`, `Unauthorized`, `ServerError`)
 - Multiple output formats: JSON, string, XML, plain text
+- Response type follows the URL guard automatically (e.g. `api/v2/*` → XML), with a per-request override
 - Cleanup hooks (`onSuccessFunction`, `onErrorFunction`, `always`) that can never change the response
 - Exception guard that returns JSON instead of Laravel's HTML error pages, registered automatically
+- Artisan generator for custom guards that registers itself
 - Optional `requiresToken` middleware for Sanctum bearer tokens
 - Optional OTP helper (cache-based, with attempt limits, lockout, and resend debounce)
 
@@ -19,8 +21,16 @@ A small Laravel package for building consistent API responses. Write your logic 
 
 ## Installation
 
+Install the package:
+
 ```bash
 composer require ikongdev/laravel-rest-api
+```
+
+Set up the essential components, such as `routes/api.php` and `config/restapi.php`:
+
+```bash
+php artisan restapi:install
 ```
 
 ## Quick start
@@ -192,7 +202,11 @@ Each status decides how it logs itself. `Success`, for example, writes its messa
 
 ## Response types
 
-Choose the output format with `responseType()`:
+The output format is chosen in this order:
+
+1. `->responseType(...)` on the builder, if you call it
+2. The `$responseType` of the [guard](#custom-guard) whose prefix matches the request URL
+3. `ResponseType::JSON`
 
 ```php
 use IkongDev\RestApi\Enum\ResponseType;
@@ -226,9 +240,35 @@ By default, Laravel returns HTML error pages for things like 404s and unauthenti
 | `ValidationException`           | `Fail` with the validation errors         |
 | Anything else                   | `ServerError`                             |
 
+For `abort()` calls, only the codes 401 to 405 are translated to a matching status. Any other exception is returned as a `ServerError`.
+
 ### Custom guard
 
-Need a different prefix or output format? Extend `GuardResponse`:
+Need a different prefix or output format? Extend `GuardResponse`. A guard does two things for every request whose URL matches its prefix:
+
+- It formats **exceptions** (404, 401, validation, and so on) in the guard's response type.
+- It sets the **default response type** for `ApiResponse`, so controllers under that prefix don't need to call `responseType()` themselves.
+
+#### Generate one with Artisan
+
+```bash
+php artisan make:restapi-guard V2Guard --prefix=api/v2 --type=XML
+```
+
+| Option            | Description                              | Default |
+| ----------------- | ---------------------------------------- | ------- |
+| `--prefix` / `-p` | URL prefix the guard covers              | `api`   |
+| `--type` / `-t`   | `JSON`, `XML`, `String` or `Plain`       | `JSON`  |
+| `--force`         | Overwrite the guard if it already exists |         |
+
+The class is created in `app/Guards` and registered for you in two places:
+
+- `bootstrap/app.php`, inside `withExceptions()`, so exceptions use the guard.
+- `AppServiceProvider::boot()`, so `ApiResponse` picks up the guard's response type.
+
+If a file can't be edited automatically (for example, the structure is unusual), the command prints the line to add manually.
+
+#### Or write it yourself
 
 ```php
 <?php
@@ -240,13 +280,27 @@ use IkongDev\RestApi\Guards\GuardResponse;
 
 class V2Guard extends GuardResponse
 {
-    protected ?string $guard = 'v2';
+    protected ?string $guard = 'api/v2'; // follows the url app.domain{/api/v2/}uri
 
-    protected ResponseType $responseType = ResponseType::JSON;
+    protected ResponseType $responseType = ResponseType::XML;
 }
 ```
 
-Register it in `bootstrap/app.php`:
+Routes in `routes/api.php` are registered under the `api` prefix by default, so a `v2` group ends up at `api/v2`:
+
+```php
+// routes/api.php
+
+Route::controller(YourController::class)
+    ->prefix('v2')
+    ->group(function () {
+        // rest here
+    });
+```
+
+Then register it in two places.
+
+`bootstrap/app.php`:
 
 ```php
 use App\Guards\V2Guard;
@@ -256,6 +310,37 @@ use Illuminate\Foundation\Configuration\Exceptions;
     (new V2Guard())->parse($exceptions);
 })
 ```
+
+`app/Providers/AppServiceProvider.php`:
+
+```php
+use App\Guards\V2Guard;
+use IkongDev\RestApi\Guards\GuardResponse;
+
+public function boot(): void
+{
+    GuardResponse::register(V2Guard::class);
+}
+```
+
+#### How the default response type works
+
+```php
+// GET /api/v2/products  → guard matches, XML
+return ApiResponse::make($request)
+    ->process(fn () => new Success('ok'))
+    ->send();
+
+// same URL, but this request opts out → JSON
+return ApiResponse::make($request)
+    ->responseType(ResponseType::JSON)
+    ->process(fn () => new Success('ok'))
+    ->send();
+```
+
+- **Matching is by URL, not by controller.** A guard with `'api/v2'` matches `api/v2` and `api/v2/*`.
+- **The first match wins.** Register more specific prefixes (`api/v2/admin`) before broader ones (`api/v2`). The generator adds each new guard at the top of `boot()`, so the newest guard is checked first.
+- **No match means JSON.** URLs that no guard covers fall back to `ResponseType::JSON`.
 
 Each handler is a `protected` method (`notFound()`, `unauthenticated()`, `forbidden()`, `validation()`, `serverError()`, `notAllowed()`), so you can override any of them.
 
@@ -460,23 +545,41 @@ public function verifyOtp(Request $request)
 
 Here `issueToken()` is your own method that returns a `Success` containing a Sanctum token, which the client then sends as a bearer token to routes using `requiresToken`.
 
+## Artisan commands
+
+| Command                                           | Description                                                                 |
+| ------------------------------------------------- | --------------------------------------------------------------------------- |
+| `php artisan restapi:install`                     | Set up `routes/api.php` and `config/restapi.php`                            |
+| `php artisan make:restapi-guard Name [-p] [-t]`   | Generate a custom guard and register it (see [Custom guard](#custom-guard)) |
+| `php artisan vendor:publish --tag=restapi-config` | Publish `config/restapi.php`                                                |
+| `php artisan vendor:publish --tag=restapi-views`  | Publish the OTP email template                                              |
+
 ## API reference
 
 ### `ApiResponse`
 
-| Method                         | Description                              |
-| ------------------------------ | ---------------------------------------- |
-| `make($request = null)`        | Start a new response builder             |
-| `validate(array $rules)`       | Add validation rules                     |
-| `parameters(array $params)`    | Declare parameters passed to `process()` |
-| `headers(array $headers)`      | Declare headers passed to `process()`    |
-| `process($closure or $status)` | Your logic, or a ready-made status       |
-| `onSuccessFunction(callable)`  | Hook that runs on success                |
-| `onErrorFunction(callable)`    | Hook that runs on failure                |
-| `always(callable)`             | Hook that always runs last               |
-| `responseType(ResponseType)`   | Set the output format                    |
-| `log(bool $log = true)`        | Enable or disable logging                |
-| `send()`                       | Run everything and return the response   |
+| Method                         | Description                                                                  |
+| ------------------------------ | ---------------------------------------------------------------------------- |
+| `make($request = null)`        | Start a new builder. The response type defaults to the matching guard's type |
+| `validate(array $rules)`       | Add validation rules                                                         |
+| `parameters(array $params)`    | Declare parameters passed to `process()`                                     |
+| `headers(array $headers)`      | Declare headers passed to `process()`                                        |
+| `process($closure or $status)` | Your logic, or a ready-made status                                           |
+| `onSuccessFunction(callable)`  | Hook that runs on success                                                    |
+| `onErrorFunction(callable)`    | Hook that runs on failure                                                    |
+| `always(callable)`             | Hook that always runs last                                                   |
+| `responseType(ResponseType)`   | Set the output format, overriding the guard default                          |
+| `log(bool $log = true)`        | Enable or disable logging                                                    |
+| `send()`                       | Run everything and return the response                                       |
+
+### `GuardResponse`
+
+| Member                                   | Description                                                              |
+| ---------------------------------------- | ------------------------------------------------------------------------ |
+| `protected ?string $guard`               | URL prefix the guard covers (`api/v2` matches `api/v2` and `api/v2/*`)   |
+| `protected ResponseType $responseType`   | Format used for this guard's exceptions and as the `ApiResponse` default |
+| `GuardResponse::register(string $class)` | Make a guard's response type available to `ApiResponse`                  |
+| `parse(Exceptions $exceptions)`          | Hook the guard's exception handlers into `bootstrap/app.php`             |
 
 ## License
 
