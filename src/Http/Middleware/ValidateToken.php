@@ -3,8 +3,6 @@
 namespace IkongDev\RestApi\Http\Middleware;
 
 use Closure;
-use IkongDev\RestApi\Guards\ApiGuardResponse;
-use IkongDev\RestApi\Status\Unauthorized;
 use Illuminate\Http\Request;
 use Laravel\Sanctum\PersonalAccessToken;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,11 +19,7 @@ class ValidateToken
             : null;
 
         if (! $user) {
-            return ApiGuardResponse::send(
-                new Unauthorized('Unauthenticated.', [
-                    'exception' => 'token invalid',
-                ])
-            );
+            abort(401, 'Your Token is invalid');
         }
 
         $request->setUserResolver(fn () => $user);
