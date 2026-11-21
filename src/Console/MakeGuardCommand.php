@@ -8,7 +8,9 @@ use Symfony\Component\Console\Input\InputOption;
 class MakeGuardCommand extends GeneratorCommand
 {
     protected $name = 'make:restapi-guard';
+
     protected $description = 'Create a new REST API exception guard';
+
     protected $type = 'Guard';
 
     public function handle()
@@ -17,9 +19,55 @@ class MakeGuardCommand extends GeneratorCommand
             return false; // class already exists
         }
 
-        $this->registerInBootstrap($this->qualifyClass($this->getNameInput()));
+        $class = $this->qualifyClass($this->getNameInput());
+
+        $this->registerInBootstrap($class);
+        $this->registerInBootProvider($class);
 
         return self::SUCCESS;
+    }
+
+    protected function registerInBootProvider(string $class): void
+    {
+        $path = app_path('Providers/AppServiceProvider.php');
+
+        if (! file_exists($path)) {
+            $this->components->warn('AppServiceProvider.php not found.');
+            $this->line('Add this to a service provider\'s boot() manually:');
+            $this->line('    \\IkongDev\\RestApi\\Guards\\GuardResponse::register(\\'.$class.'::class);');
+
+            return;
+        }
+
+        $contents = file_get_contents($path);
+
+        if (str_contains($contents, $class.'::class')) {
+            $this->components->warn('Guard already registered in AppServiceProvider.');
+
+            return;
+        }
+
+        $line = '\\IkongDev\\RestApi\\Guards\\GuardResponse::register(\\'.$class.'::class);';
+        $count = 0;
+
+        $updated = preg_replace_callback(
+            '/(public\s+function\s+boot\s*\([^)]*\)\s*(?::\s*void)?\s*\{\R)/',
+            fn ($m) => $m[1].'        '.$line.PHP_EOL,
+            $contents,
+            1,
+            $count
+        );
+
+        if ($count === 0) {
+            $this->components->warn('Could not find boot() in AppServiceProvider.');
+            $this->line('Add this inside it manually:');
+            $this->line('    '.$line);
+
+            return;
+        }
+
+        file_put_contents($path, $updated);
+        $this->components->info('Registered in AppServiceProvider::boot().');
     }
 
     protected function registerInBootstrap(string $class): void
@@ -27,17 +75,18 @@ class MakeGuardCommand extends GeneratorCommand
         $path = base_path('bootstrap/app.php');
         $contents = file_get_contents($path);
 
-        if (str_contains($contents, $class . '()')) {
+        if (str_contains($contents, $class.'()')) {
             $this->components->warn('Guard already registered in bootstrap/app.php.');
+
             return;
         }
 
-        $line = '(new \\' . $class . '())->parse($exceptions);';
+        $line = '(new \\'.$class.'())->parse($exceptions);';
         $count = 0;
 
         $updated = preg_replace_callback(
             '/(->withExceptions\(function\s*\(Exceptions \$exceptions\)[^{]*\{\R)/',
-            fn ($m) => $m[1] . '        ' . $line . PHP_EOL,
+            fn ($m) => $m[1].'        '.$line.PHP_EOL,
             $contents,
             1,
             $count
@@ -46,7 +95,8 @@ class MakeGuardCommand extends GeneratorCommand
         if ($count === 0) {
             $this->components->warn('Could not find withExceptions() in bootstrap/app.php.');
             $this->line('Add this inside it manually:');
-            $this->line('    ' . $line);
+            $this->line('    '.$line);
+
             return;
         }
 
@@ -56,12 +106,12 @@ class MakeGuardCommand extends GeneratorCommand
 
     protected function getStub(): string
     {
-        return __DIR__ . '/stubs/guard.stub';
+        return __DIR__.'/stubs/guard.stub';
     }
 
     protected function getDefaultNamespace($rootNamespace): string
     {
-        return $rootNamespace . '\Guards';
+        return $rootNamespace.'\Guards';
     }
 
     protected function buildClass($name): string
