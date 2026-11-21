@@ -143,10 +143,44 @@ Using a `FormRequest`? Its own `rules()` run first, as usual. If you also call `
 
 ## Parameters and headers
 
-`process()` receives three arguments: the request, the parameters, and the headers.
+`process()` calls your closure with three arguments, always in this order:
+
+| Position | Argument   | Contains                       |
+| -------- | ---------- | ------------------------------ |
+| 1st      | `$request` | The current request            |
+| 2nd      | `$params`  | The values from `parameters()` |
+| 3rd      | `$headers` | The values from `headers()`    |
 
 ```php
-->process(function ($request, $params, $headers) {//if you use $params or $header, you must also declare the $request, otherwise it will fail to recognize the $params
+->process(function ($request, $params, $headers) {
+    // ...
+})
+```
+
+The order matters, not the names. You can call the variables anything, but you can only leave out arguments **from the end**:
+
+```php
+->process(function ($request) { ... })                    // ✅ request only
+->process(function ($request, $params) { ... })           // ✅ request + params
+->process(function ($request, $params, $headers) { ... }) // ✅ all three
+```
+
+To use `$params` or `$headers`, you must declare `$request` before them, even if you don't use it. Otherwise your variable receives the request instead:
+
+```php
+->process(function ($params) {
+    $params->user; // ❌ $params is actually the request here
+})
+
+->process(function ($request, $params) {
+    $params->user; // ✅
+})
+```
+
+If you don't need the request, use `$_` or `$request` as a placeholder:
+
+```php
+->process(function ($_, $params, $headers) {
     // ...
 })
 ```
