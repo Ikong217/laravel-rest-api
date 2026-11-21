@@ -1,7 +1,9 @@
 <?php
+
 namespace IkongDev\RestApi;
 
 use IkongDev\RestApi\Enum\ResponseType;
+use IkongDev\RestApi\Guards\GuardResponse;
 use IkongDev\RestApi\Helper\Header;
 use IkongDev\RestApi\Helper\Parameter;
 use IkongDev\RestApi\Status\Fail;
@@ -19,22 +21,36 @@ use Illuminate\Support\Facades\Validator;
 class ApiResponse
 {
     private \Closure|Status $status;
-    private Request|FormRequest|null $request = null;
-    private array $validation                     = [];
-    private ?Parameter $params                    = null;
-    private ?Header $headers                      = null;
-    private $onError                              = null;
-    private $onSuccess                            = null;
-    private $final                                = null;
-    private bool $log                             = false;
-    private ResponseType $responseType            = ResponseType::JSON;
 
-    public static function make(Request | FormRequest | null $request = null): static
+    private Request|FormRequest|null $request = null;
+
+    private array $validation = [];
+
+    private ?Parameter $params = null;
+
+    private ?Header $headers = null;
+
+    private $onError = null;
+
+    private $onSuccess = null;
+
+    private $final = null;
+
+    private bool $log = false;
+
+    private ResponseType $responseType = ResponseType::JSON;
+
+    public static function make(Request|FormRequest|null $request = null): static
     {
-        $instance          = new static();
+        $instance = new static;
         $instance->request = $request;
-        $instance->params  = new Parameter();
-        $instance->headers = new Header();
+        $instance->params = new Parameter;
+        $instance->headers = new Header;
+
+        $current = $request ?? request();
+        $instance->responseType = GuardResponse::resolveResponseType($current)
+            ?? $instance->responseType;
+
         return $instance;
     }
 
@@ -46,6 +62,7 @@ class ApiResponse
         foreach ($validation as $key => $value) {
             $this->validation[$key] = $value;
         }
+
         return $this;
     }
 
@@ -59,6 +76,7 @@ class ApiResponse
                 $this->params->{$key} = $value;
             }
         }
+
         return $this;
     }
 
@@ -71,42 +89,49 @@ class ApiResponse
                 $this->headers->{$key} = $value;
             }
         }
+
         return $this;
     }
 
     public function responseType(ResponseType $responseType): static
     {
         $this->responseType = $responseType;
+
         return $this;
     }
 
     public function log(bool $log = true): static
     {
         $this->log = $log;
+
         return $this;
     }
 
-    public function process(\Closure  | Success | Fail | Forbidden | NotFound | Unauthorized $process): static
+    public function process(\Closure|Success|Fail|Forbidden|NotFound|Unauthorized $process): static
     {
         $this->status = $process;
+
         return $this;
     }
 
-    public function onErrorFunction(callable $errorFunction): static //optional cleanup, e.g. rollback, alert
+    public function onErrorFunction(callable $errorFunction): static // optional cleanup, e.g. rollback, alert
     {
         $this->onError = $errorFunction;
+
         return $this;
     }
 
-    public function onSuccessFunction(callable $successFunction): static //optional cleanup, e.g. send email, issue token
+    public function onSuccessFunction(callable $successFunction): static // optional cleanup, e.g. send email, issue token
     {
         $this->onSuccess = $successFunction;
+
         return $this;
     }
 
-    public function always(callable $final): static //optional cleanup, runs last regardless of outcome, e.g. Auth::logout()
+    public function always(callable $final): static // optional cleanup, runs last regardless of outcome, e.g. Auth::logout()
     {
         $this->final = $final;
+
         return $this;
     }
 
@@ -116,7 +141,7 @@ class ApiResponse
             // FormRequest's own rules() already ran automatically before this point.
             // If validate() was also called, merge it in and re-check — validate() wins per-field.
             if (! empty($this->validation)) {
-                $rules     = array_merge($this->request->rules(), $this->validation);
+                $rules = array_merge($this->request->rules(), $this->validation);
                 $validator = Validator::make($this->request->all(), $rules);
                 if ($validator->fails()) {
                     return $this->handleResponse(new Fail('validation fails', $validator->errors()->toArray()));
@@ -157,7 +182,7 @@ class ApiResponse
         ]);
 
         $message = config('app.debug') ? $e->getMessage() : 'Something went wrong.';
-        $status  = new ServerError($message);
+        $status = new ServerError($message);
 
         // still try onError cleanup, but never let it change what we return
         if ($this->onError) {
@@ -193,8 +218,8 @@ class ApiResponse
                 } catch (\Throwable $e) {
                     Log::error('onSuccess callback failed (response still returns original status)', [
                         'original_status' => $status->obtain(),
-                        'callback_error'  => $e->getMessage(),
-                        'trace'           => $e->getTraceAsString(),
+                        'callback_error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
                     ]);
                 }
             }
@@ -205,8 +230,8 @@ class ApiResponse
                 } catch (\Throwable $e) {
                     Log::error('onError callback failed (response still returns original status)', [
                         'original_status' => $status->obtain(),
-                        'callback_error'  => $e->getMessage(),
-                        'trace'           => $e->getTraceAsString(),
+                        'callback_error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
                     ]);
                 }
             }

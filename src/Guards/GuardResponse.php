@@ -1,4 +1,5 @@
 <?php
+
 namespace IkongDev\RestApi\Guards;
 
 use IkongDev\RestApi\Enum\ResponseType;
@@ -11,6 +12,7 @@ use IkongDev\RestApi\Status\Unauthorized;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
@@ -19,9 +21,40 @@ use Throwable;
 
 abstract class GuardResponse
 {
-    protected ?string $guard = 'web';
+    protected ?string $guard = null;
 
     protected ResponseType $responseType = ResponseType::JSON;
+
+    /** @var array<class-string<GuardResponse>> */
+    protected static array $registered = [];
+
+    public static function register(string $class): void
+    {
+        static::$registered[$class] = $class;
+    }
+
+    public function matches(Request $request): bool
+    {
+        return $this->guard !== null
+            && $request->is($this->guard, $this->guard.'/*');
+    }
+
+    public function getResponseType(): ResponseType
+    {
+        return $this->responseType;
+    }
+
+    public static function resolveResponseType(Request $request): ?ResponseType
+    {
+        foreach (static::$registered as $class) {
+            $guard = new $class;
+            if ($guard->matches($request)) {
+                return $guard->getResponseType();
+            }
+        }
+
+        return null;
+    }
 
     public static function send(Status $status)
     {
@@ -44,12 +77,12 @@ abstract class GuardResponse
 
             return match (true) {
                 $e instanceof MethodNotAllowedHttpException => $this->notAllowed($e),
-                $e instanceof NotFoundHttpException         => $this->notFound($e),
-                $e instanceof AuthenticationException       => $this->unauthenticated($e),
-                $e instanceof AuthorizationException        => $this->forbidden($e),
-                $e instanceof ValidationException           => $this->validation($e),
-                $e instanceof HttpExceptionInterface        => $this->httpError($e), // new
-                default                                     => $this->serverError($e),
+                $e instanceof NotFoundHttpException => $this->notFound($e),
+                $e instanceof AuthenticationException => $this->unauthenticated($e),
+                $e instanceof AuthorizationException => $this->forbidden($e),
+                $e instanceof ValidationException => $this->validation($e),
+                $e instanceof HttpExceptionInterface => $this->httpError($e), // new
+                default => $this->serverError($e),
             };
         });
     }
@@ -57,17 +90,17 @@ abstract class GuardResponse
     protected function httpError(HttpExceptionInterface $e)
     {
         return match ($e->getStatusCode()) {
-            401     => $this->unauthenticated($e),
-            403     => $this->forbidden($e),
-            404     => $this->notFound($e),
-            405     => $this->notAllowed($e),
+            401 => $this->unauthenticated($e),
+            403 => $this->forbidden($e),
+            404 => $this->notFound($e),
+            405 => $this->notAllowed($e),
             default => $this->serverError($e),
         };
     }
 
     private function toGuard(): string
     {
-        return trim($this->guard, '/') . '/*';
+        return trim($this->guard, '/').'/*';
     }
 
     protected function notAllowed(Throwable $e)
@@ -119,5 +152,4 @@ abstract class GuardResponse
             app()->hasDebugModeEnabled() ? ['exception' => $e->getMessage()] : []
         ))->toResponse($this->responseType);
     }
-
 }
