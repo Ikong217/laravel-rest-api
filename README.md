@@ -16,7 +16,7 @@ A small Laravel package for building consistent API responses. Write your logic 
 ## Requirements
 
 - PHP 8.2+
-- Laravel 11 or 12
+- Laravel 11, 12, or 13
 - [Laravel Sanctum](https://laravel.com/docs/sanctum) (only needed for the token middleware; your `User` model must use `Laravel\Sanctum\HasApiTokens`)
 
 ## Installation
@@ -146,7 +146,7 @@ Using a `FormRequest`? Its own `rules()` run first, as usual. If you also call `
 `process()` receives three arguments: the request, the parameters, and the headers.
 
 ```php
-->process(function ($request, $params, $headers) {
+->process(function ($request, $params, $headers) {//if you use $params or $header, you must also declare the $request, otherwise it will fail to recognize the $params
     // ...
 })
 ```
