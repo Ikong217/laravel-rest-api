@@ -20,7 +20,7 @@
   ],
   "require": {
     "php": "^8.2",
-    "laravel/framework": "^11.0|^12.0"
+    "laravel/framework": "^11.0|^12.0|^13.0"
   },
   "suggest": {
     "laravel/sanctum": "^4.0 is required to use the requiresToken middleware"

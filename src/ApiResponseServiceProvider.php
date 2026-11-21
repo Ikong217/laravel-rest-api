@@ -32,6 +32,13 @@ class ApiResponseServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'restapi');
         $this->publishes([__DIR__.'/../config/restapi.php' => config_path('restapi.php')], 'restapi-config');
         $this->publishes([__DIR__.'/../resources/views' => resource_path('views/vendor/restapi')], 'restapi-views');
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \IkongDev\RestApi\Console\InstallCommand::class,
+                \IkongDev\RestApi\Console\MakeGuardCommand::class
+            ]);
+        }
     }
 
     public function register(): void
