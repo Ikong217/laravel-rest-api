@@ -1,0 +1,13 @@
+<?php
+
+namespace {{ namespace }};
+
+use IkongDev\RestApi\Enum\ResponseType;
+use IkongDev\RestApi\Guards\GuardResponse;
+
+class {{ class }} extends GuardResponse
+{
+    protected ?string $guard = '{{ prefix }}';
+
+    protected ResponseType $responseType = ResponseType::{{ type }};
+}
