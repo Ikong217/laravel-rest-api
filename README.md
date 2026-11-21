@@ -215,11 +215,50 @@ return ApiResponse::make($r)
 
 ## Error handling
 
-If your `process()` closure throws an exception, the package catches it, runs `onErrorFunction` and `always`, and returns a `ServerError` (`500`).
+**You don't need `try/catch` inside `process()`.** If your code throws, the package catches it for you, runs your hooks, and returns a clean `ServerError` (`500`).
 
-- With `APP_DEBUG=true`, the real exception message is returned.
+```php
+return ApiResponse::make($request)
+    ->process(function ($request) {
+        // no try/catch needed, even if this throws
+        $order = Order::create($request->all());
+        $this->chargeCard($order);
+
+        return new Success('paid', ['order' => $order]);
+    })
+    ->onErrorFunction(fn ($status) => DB::rollBack())  // runs if anything above throws
+    ->always(fn ($status) => Log::info('done'))        // runs last, always
+    ->send();
+```
+
+When `process()` throws:
+
+1. The error and stack trace are logged as `critical`.
+2. `onErrorFunction` runs (rollback, alerts, and so on).
+3. `always` runs.
+4. The client receives a `ServerError` (`500`).
+
+- With `APP_DEBUG=true`, the response contains the real exception message.
 - Otherwise, the client only sees `Something went wrong.`
-- The full error and stack trace are written to the log as `critical`.
+- `onSuccessFunction` does **not** run.
+
+### When to still use `try/catch`
+
+Only when you want to return a specific status instead of a generic 500:
+
+```php
+->process(function ($request) {
+    try {
+        $this->chargeCard($request);
+    } catch (PaymentDeclinedException $e) {
+        return new Fail('Payment declined.');   // your own status, still triggers onErrorFunction
+    }
+
+    return new Success('paid');
+})
+```
+
+> Don't catch an exception and then ignore it. If you swallow it and return a `Success`, the package has no way to know something went wrong, so `onErrorFunction` won't run.
 
 If `process()` is given a closure, it must return a `Status` (for example `Success` or `Fail`). Anything else is treated as a server error.
 
